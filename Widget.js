@@ -389,21 +389,6 @@ function(
             return content;
         },
 
-        drawingsGetKml: function(asString, onlyChecked) {
-            var graphics = (onlyChecked) ? this.getCheckedGraphics(false) : this.drawBox.drawLayer.graphics;
-
-            if (!graphics.length)
-                return asString ? "" : false;
-
-            var doc = keyhole.graphicsToKml(graphics);
-
-            if (asString) {
-                return new XMLSerializer().serializeToString(doc);
-            }
-
-            return doc;
-        },
-
         ///////////////////////// MENU METHODS ///////////////////////////////////////////////////////////
         menuOnClickAdd: function() {
             this.setMode("add1");
@@ -1197,14 +1182,16 @@ function(
         exportKmlFile: function(evt) {
             if (evt && evt.preventDefault)
                 evt.preventDefault();
-            var text = this.drawingsGetKml(true, true);
-            if (!text) {
+
+            var graphics = this.getCheckedGraphics(false);
+            if (!graphics.length) {
                 this.showMessage(this.nls.importWarningNoExport0Draw, 'warning');
                 return false;
             }
+
+            var doc = keyhole.graphicsToKml(graphics, null, true);
             var filename = (this.config.exportFileName ? this.config.exportFileName : "myDrawings") + '.kml';
-            var blob = new Blob([text], {type: 'application/vnd.google-earth.kml+xml;charset=utf-8'});
-            saveAs(blob, filename, true);
+            keyhole.saveAs(doc, filename);
         },
 
         launchExport: function(only_graphics_checked) {

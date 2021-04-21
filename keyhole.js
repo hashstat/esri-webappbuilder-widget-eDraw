@@ -60,6 +60,14 @@ function(SpatialReference, projection) {
       return this;
     }
 
+    usingIf(predicate, func) {
+      // Call function with the current node if predicate is true
+      if (predicate) {
+        func(this);
+      }
+      return this;
+    }
+
     forEach(items, func) {
       // Call func(node, item) for each item in array it
       items.forEach(function(item) { func(this, item); }, this);
@@ -174,7 +182,7 @@ function(SpatialReference, projection) {
 
 
   return {
-    graphicsToKml: function(graphics) {
+    graphicsToKml: function(graphics, labels=null, eDraw=false) {
       // Convert a list of graphics objects to an KML document and return XMLDocument object.
       //
       // Returns false if no graphics are given.
@@ -196,10 +204,25 @@ function(SpatialReference, projection) {
             Promise.resolve(projection.load());
             geometry = projection.project(geometry, wgs84);
           }
+          let name = graphic.getTitle() || '';
+          let description = graphic.attributes.description || '';
 
           node.add('Placemark').
-            add('name').text(graphic.attributes.name).end.
-            add('description').cdata(graphic.attributes.description).end.
+            add('name').text(name).dropIfEmpty().
+            usingIf(description, function(node) {
+              node.add('description').cdata(graphic.attributes.description);
+            }).
+            usingIf(!eDraw && Object.keys(graphic.attributes).length, function(node) {
+              node.add('ExtendedData').
+               forEach(Object.entries(graphic.attributes), function(node, [name, value]) {
+                 let label = labels !== null ? labels[name] : undefined;
+                 node.add('Data').attr('name', name).
+                   usingIf((label !== undefined && label !== name), function(node) {
+                     node.add('displayName').text(label);
+                   }).
+                   add('value').text(value);
+               });
+            }).
             add('Style').using(function(node) { symbolStyle(node, graphic.symbol); }).dropIfEmpty().
             add('MultiGeometry').
               using(function(node) {
@@ -215,7 +238,7 @@ function(SpatialReference, projection) {
                         add('extrude').text('0').end.
                         add('altitudeMode').text('clampToGround').end.
                         add('coordinates').text(
-                          path.map(function([x, y, z=0]) { return `${x},${y},${geometry.hasZ ? z : 0}`; }).join(' '));
+                          path.map(([x, y, z=0]) => `${x},${y},${geometry.hasZ ? z : 0}`).join(' '));
                     });
                     break;
 
@@ -227,7 +250,7 @@ function(SpatialReference, projection) {
                         add('outerBoundaryIs').
                           add('LinearRing').
                             add('coordinates').text(
-                              ring.map(function([x, y, z=0]) { return `${x},${y},${geometry.hasZ ? z : 0}`; }).join(' '));
+                              ring.map(([x, y, z=0]) => `${x},${y},${geometry.hasZ ? z : 0}`).join(' '));
                     });
                     break;
 
@@ -240,5 +263,10 @@ function(SpatialReference, projection) {
       return doc;
     },
 
+    saveAs: function(doc, filename='features.kml') {
+      var text = new XMLSerializer().serializeToString(doc);
+      var blob = new Blob([text], {type: 'application/vnd.google-earth.kml+xml;charset=utf-8'});
+      saveAs(blob, filename, true);
+    }
   };
 });

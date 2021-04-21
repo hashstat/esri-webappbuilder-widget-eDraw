@@ -1,6 +1,7 @@
 define({
 	root : ({
 		_widgetLabel : "eDraw",
+		_featureAction_ExportToKml : "Export to KML",
 		yes:"Yes",
 		yes:"Yes",
 		no:"No",
