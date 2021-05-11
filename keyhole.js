@@ -143,6 +143,8 @@ function(SpatialReference, projection) {
 
   function symbolStyle(node, symbol) {
     // Add style to node to match symbol as best as possible
+    if (symbol === null)
+      return;  // ignore nodes with no style
     switch (symbol.type) {
       case 'simplelinesymbol':
         node.add('LineStyle').
