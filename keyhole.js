@@ -141,7 +141,21 @@ function(SpatialReference, projection) {
   }
 
 
-  function symbolStyle(node, symbol) {
+  function symbolStyle(node, graphic, symbol) {
+    if (symbol === undefined) {
+        // Attempt to get the symbol from the feature layer
+        try {
+            symbol = graphic.getLayer().renderer.getSymbol(graphic);
+        } catch (error) {
+            if (!(error instanceof TypeError))
+                throw error;
+            // Ignore missing properties; they don't always exist
+            console.log(`ignoring error '${error}' at ${error.fileName}:${error.lineNumber}:${error.columnNumber}`);
+        }
+    }
+    if (symbol === undefined)
+        symbol = graphic.symbol;
+
     // Add style to node to match symbol as best as possible
     if (symbol === null)
       return;  // ignore nodes with no style
@@ -157,7 +171,7 @@ function(SpatialReference, projection) {
           add('color').text(colorToHex(symbol.color)).end.
           add('fill').text('1').end.
           add('outline').text('1');
-        symbolStyle(node, symbol.outline);
+        symbolStyle(node, graphic, symbol.outline);
         break;
 
       case 'picturemarkersymbol':
@@ -225,7 +239,7 @@ function(SpatialReference, projection) {
                    add('value').text(value);
                });
             }).
-            add('Style').using(function(node) { symbolStyle(node, graphic.symbol); }).dropIfEmpty().
+            add('Style').using(function(node) { symbolStyle(node, graphic); }).dropIfEmpty().
             add('MultiGeometry').
               using(function(node) {
                 switch (geometry.type) {
